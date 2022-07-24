@@ -62,7 +62,7 @@
 
     <!-- Microsoft packages -->
     <MicrosoftBuildVersion>17.0.0</MicrosoftBuildVersion>
-    <MicrosoftCodeAnalysisVersion>4.0.1</MicrosoftCodeAnalysisVersion>
+    <MicrosoftCodeAnalysisVersion>4.2.0</MicrosoftCodeAnalysisVersion>
     <MicrosoftCodeAnalysisAnalyzersVersion>3.3.3</MicrosoftCodeAnalysisAnalyzersVersion>
     <MicrosoftCSharpVersion>4.7.0</MicrosoftCSharpVersion>
 

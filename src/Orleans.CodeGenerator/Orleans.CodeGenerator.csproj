@@ -5,7 +5,8 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageDescription>Code generation library for Orleans.Serialization</PackageDescription>
     <NoPackageAnalysis>true</NoPackageAnalysis>
-    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <!-- TODO: We only need build output while testing -->
+    <!--<IncludeBuildOutput>false</IncludeBuildOutput>-->
     <DevelopmentDependency>true</DevelopmentDependency>
     <IsOrleansFrameworkPart>false</IsOrleansFrameworkPart>
   </PropertyGroup>
