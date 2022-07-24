@@ -10,6 +10,69 @@ namespace Orleans.CodeGenerator
 {
     internal static class MetadataGenerator
     {
+        static readonly IdentifierNameSyntax _configParam = "config".ToIdentifierName();
+        static readonly MemberAccessExpressionSyntax _addSerializerMethod = _configParam.Member("Serializers").Member("Add");
+        static readonly MemberAccessExpressionSyntax _addCopierMethod = _configParam.Member("Copiers").Member("Add");
+        static readonly MemberAccessExpressionSyntax _addConverterMethod = _configParam.Member("Converters").Member("Add");
+
+        public static ClassDeclarationSyntax GenerateMetadata(ISerializableTypeDescription serializableTypeDescription, LibraryTypes libraryTypes)
+        {
+            var interfaceType = libraryTypes.ITypeManifestProvider;
+            var configType = libraryTypes.TypeManifestOptions;
+
+            var configureMethod = MethodDeclaration(PredefinedType(Token(SyntaxKind.VoidKeyword)), "Configure")
+                .AddModifiers(Token(SyntaxKind.PublicKeyword))
+                .AddParameterListParameters(
+                    Parameter(_configParam.Identifier).WithType(configType.ToTypeSyntax()));
+
+            configureMethod = configureMethod.AddBodyStatements(
+                ExpressionStatement(
+                    InvocationExpression(
+                        _addSerializerMethod,
+                        ArgumentList(
+                            SingletonSeparatedList(
+                                Argument(TypeOfExpression(serializableTypeDescription.GetCodecTypeName())))))),
+                ExpressionStatement(
+                    InvocationExpression(
+                        _addCopierMethod,
+                        ArgumentList(
+                            SingletonSeparatedList(
+                                Argument(TypeOfExpression(serializableTypeDescription.GetCopierTypeName()))))))
+            );
+
+            if (serializableTypeDescription.IsEmptyConstructable || serializableTypeDescription.HasActivatorConstructor)
+            {
+                configureMethod = configureMethod.AddBodyStatements(ExpressionStatement(
+                    InvocationExpression(
+                        _addConverterMethod,
+                        ArgumentList(
+                            SingletonSeparatedList(
+                                Argument(TypeOfExpression(serializableTypeDescription.GetCopierTypeName()))))))
+                );
+            }
+
+            var className = GetSimpleClassName(serializableTypeDescription);
+            return ClassDeclaration(className)
+                .AddBaseListTypes(SimpleBaseType(interfaceType.ToTypeSyntax()))
+                .AddModifiers(Token(SyntaxKind.InternalKeyword), Token(SyntaxKind.SealedKeyword))
+                .AddAttributeLists(AttributeList(SingletonSeparatedList(CodeGenerator.GetGeneratedCodeAttributeSyntax())))
+                .AddMembers(configureMethod);
+        }
+
+        public static AttributeListSyntax GenerateMetadataProviderAttribute(ISerializableTypeDescription serializableTypeDescription, LibraryTypes libraryTypes)
+        {
+            return AttributeList()
+                .WithTarget(AttributeTargetSpecifier(Token(SyntaxKind.AssemblyKeyword)))
+                .WithAttributes(
+                    SingletonSeparatedList(
+                        Attribute(libraryTypes.TypeManifestProviderAttribute.ToNameSyntax())
+                            .AddArgumentListArguments(AttributeArgument(TypeOfExpression(QualifiedName(IdentifierName(serializableTypeDescription.GeneratedNamespace), IdentifierName(GetSimpleClassName(serializableTypeDescription))))))));
+        }
+
+        public static string GetSimpleClassName(ISerializableTypeDescription serializableType) => GetSimpleClassName(serializableType.Name);
+
+        public static string GetSimpleClassName(string name) => $"Metadata_{name}";
+
         public static ClassDeclarationSyntax GenerateMetadata(Compilation compilation, MetadataModel metadataModel, LibraryTypes libraryTypes)
         {
             var configParam = "config".ToIdentifierName();
