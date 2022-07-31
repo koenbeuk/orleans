@@ -59,6 +59,65 @@ namespace Orleans.CodeGenerator
                 .AddMembers(configureMethod);
         }
 
+        public static ClassDeclarationSyntax GenerateMetadata(InvokableInterfaceDescription invokableInterfaceDescription, MetadataModel metadataModel, LibraryTypes libraryTypes)
+        {
+            var configType = libraryTypes.TypeManifestOptions;
+            var configParam = "config".ToIdentifierName();
+
+            var configureMethod = MethodDeclaration(PredefinedType(Token(SyntaxKind.VoidKeyword)), "Configure")
+                .AddModifiers(Token(SyntaxKind.PublicKeyword))
+                .AddParameterListParameters(
+                    Parameter(_configParam.Identifier).WithType(configType.ToTypeSyntax()));
+
+            foreach (var method in invokableInterfaceDescription.Methods)
+            {
+                var generatedInvokerDescription = metadataModel.GeneratedInvokables[method];
+
+                configureMethod = configureMethod.AddBodyStatements(
+                    ExpressionStatement(
+                        InvocationExpression(
+                            _addSerializerMethod,
+                            ArgumentList(
+                                SingletonSeparatedList(
+                                    Argument(TypeOfExpression(generatedInvokerDescription.GetCodecTypeName())))))),
+                    ExpressionStatement(
+                        InvocationExpression(
+                            _addCopierMethod,
+                            ArgumentList(
+                                SingletonSeparatedList(
+                                    Argument(TypeOfExpression(generatedInvokerDescription.GetCopierTypeName())))))),
+                    ExpressionStatement(
+                        InvocationExpression(
+                            _addConverterMethod,
+                            ArgumentList(
+                                SingletonSeparatedList(
+                                    Argument(TypeOfExpression(generatedInvokerDescription.GetActivatorTypeName()))))))
+                    );
+            }
+
+            configureMethod = configureMethod.AddBodyStatements(
+                ExpressionStatement(
+                    InvocationExpression(
+                        configParam.Member("InterfaceProxies").Member("Add"),
+                        ArgumentList(
+                            SingletonSeparatedList(
+                                Argument(TypeOfExpression(invokableInterfaceDescription.ProxyBaseType.ToNameSyntax())))))),
+                ExpressionStatement(
+                    InvocationExpression(
+                        configParam.Member("Interfaces").Member("Add"),
+                        ArgumentList(
+                            SingletonSeparatedList(
+                                Argument(TypeOfExpression(invokableInterfaceDescription.InterfaceType.ToNameSyntax()))))))
+            );
+
+            var interfaceType = libraryTypes.ITypeManifestProvider;
+            return ClassDeclaration("Metadata_" + invokableInterfaceDescription.Name)
+                .AddBaseListTypes(SimpleBaseType(interfaceType.ToTypeSyntax()))
+                .AddModifiers(Token(SyntaxKind.InternalKeyword), Token(SyntaxKind.SealedKeyword))
+                .AddAttributeLists(AttributeList(SingletonSeparatedList(CodeGenerator.GetGeneratedCodeAttributeSyntax())))
+                .AddMembers(configureMethod);
+        }
+
         public static AttributeListSyntax GenerateMetadataProviderAttribute(ISerializableTypeDescription serializableTypeDescription, LibraryTypes libraryTypes)
         {
             return AttributeList()
@@ -69,7 +128,18 @@ namespace Orleans.CodeGenerator
                             .AddArgumentListArguments(AttributeArgument(TypeOfExpression(QualifiedName(IdentifierName(serializableTypeDescription.GeneratedNamespace), IdentifierName(GetSimpleClassName(serializableTypeDescription))))))));
         }
 
+        public static AttributeListSyntax GenerateMetadataProviderAttribute(InvokableInterfaceDescription invokableInterfaceTypeDescription, LibraryTypes libraryTypes)
+        {
+            return AttributeList()
+                .WithTarget(AttributeTargetSpecifier(Token(SyntaxKind.AssemblyKeyword)))
+                .WithAttributes(
+                    SingletonSeparatedList(
+                        Attribute(libraryTypes.TypeManifestProviderAttribute.ToNameSyntax())
+                            .AddArgumentListArguments(AttributeArgument(TypeOfExpression(QualifiedName(IdentifierName(invokableInterfaceTypeDescription.GeneratedNamespace), IdentifierName(GetSimpleClassName(invokableInterfaceTypeDescription))))))));
+        }
+
         public static string GetSimpleClassName(ISerializableTypeDescription serializableType) => GetSimpleClassName(serializableType.Name);
+        public static string GetSimpleClassName(InvokableInterfaceDescription invokableInterfaceType) => GetSimpleClassName(invokableInterfaceType.Name);
 
         public static string GetSimpleClassName(string name) => $"Metadata_{name}";
 

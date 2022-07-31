@@ -44,13 +44,86 @@ public partial class IncrementalSourceGenerator : IIncrementalGenerator
         var generateSerializersProvider = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is TypeDeclarationSyntax { AttributeLists.Count: > 0 },
-                transform: static (node, _) => node
+                transform: static (context, _) => context
             )
             .Combine(generateSerializerAttributesProvider)
             .Combine(libraryTypesProvider)
-            .Select(GetSemanticTargetForGeneration)
+            .Select(GetSemanticTargetForSerializerGeneration)
             .Where(x => x != default);
 
-        context.RegisterSourceOutput(generateSerializersProvider, EmitSourceFile);
+        context.RegisterSourceOutput(generateSerializersProvider, EmitSerializerSourceFile);
+
+        var generateInvokablesProvider = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: static (node, _) => node is InterfaceDeclarationSyntax,
+                transform: static (context, _) => context
+            )
+            .Combine(libraryTypesProvider)
+            .SelectMany(GetSemanticTargetForInvokableGeneration)
+            .Where(x => x != default);
+
+        context.RegisterSourceOutput(generateInvokablesProvider, EmitInvokablesSourceFile);
+    }
+
+    private static AttributeData HasAttribute(INamedTypeSymbol symbol, ISymbol attributeType, bool inherited = false)
+    {
+        foreach (var attribute in symbol.GetAttributes())
+        {
+            if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, attributeType))
+            {
+                return attribute;
+            }
+        }
+
+        if (inherited)
+        {
+            foreach (var iface in symbol.AllInterfaces)
+            {
+                foreach (var attribute in iface.GetAttributes())
+                {
+                    if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, attributeType))
+                    {
+                        return attribute;
+                    }
+                }
+            }
+
+            while ((symbol = symbol.BaseType) != null)
+            {
+                foreach (var attribute in symbol.GetAttributes())
+                {
+                    if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, attributeType))
+                    {
+                        return attribute;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    internal static ushort? GetId(LibraryTypes libraryTypes, ISymbol memberSymbol)
+    {
+        var idAttr = memberSymbol.GetAttributes().FirstOrDefault(attr => libraryTypes.IdAttributeTypes.Any(t => SymbolEqualityComparer.Default.Equals(t, attr.AttributeClass)));
+        if (idAttr is null)
+        {
+            return null;
+        }
+
+        var id = (ushort)idAttr.ConstructorArguments.First().Value;
+        return id;
+    }
+
+    private static string GetTypeAlias(ISymbol symbol, LibraryTypes libraryTypes)
+    {
+        var attr = symbol.GetAttributes().FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(libraryTypes.WellKnownAliasAttribute, attr.AttributeClass));
+        if (attr is null)
+        {
+            return null;
+        }
+
+        var value = (string)attr.ConstructorArguments.First().Value;
+        return value;
     }
 }   

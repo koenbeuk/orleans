@@ -11,16 +11,16 @@ namespace Orleans.CodeGenerator
     internal class InvokableInterfaceDescription
     {
         public InvokableInterfaceDescription(
-            CodeGenerator generator,
+            LibraryTypes libraryTypes,
             SemanticModel semanticModel,
             INamedTypeSymbol interfaceType,
             string name,
             INamedTypeSymbol proxyBaseType,
             bool isExtension,
-            Dictionary<INamedTypeSymbol, INamedTypeSymbol> invokableBaseTypes)
+            IEnumerable<(INamedTypeSymbol, INamedTypeSymbol)> invokableBaseTypes)
         {
-            ValidateBaseClass(generator.LibraryTypes, proxyBaseType);
-            CodeGenerator = generator;
+            ValidateBaseClass(libraryTypes, proxyBaseType);
+            LibraryTypes = libraryTypes;
             SemanticModel = semanticModel;
             InterfaceType = interfaceType;
             ProxyBaseType = proxyBaseType;
@@ -65,7 +65,7 @@ namespace Orleans.CodeGenerator
             }
         }
 
-        public CodeGenerator CodeGenerator { get; }
+        public LibraryTypes LibraryTypes { get; }
 
         private IEnumerable<MethodDescription> GetMethods(INamedTypeSymbol symbol)
         {
@@ -90,7 +90,7 @@ namespace Orleans.CodeGenerator
             foreach (var pair in methods.OrderBy(kv => kv.Key, MethodSignatureComparer.Default))
             {
                 var method = pair.Key;
-                var id = CodeGenerator.GetId(method) ?? idCounter;
+                var id = GetId(LibraryTypes, method) ?? idCounter;
                 if (id >= idCounter)
                 {
                     idCounter = id + 1;
@@ -121,7 +121,7 @@ namespace Orleans.CodeGenerator
         public SemanticModel SemanticModel { get; }
         public string GeneratedNamespace { get; }
         public List<(string Name, ITypeParameterSymbol Parameter)> TypeParameters { get; }
-        public Dictionary<INamedTypeSymbol, INamedTypeSymbol> InvokableBaseTypes { get; }
+        public IEnumerable<(INamedTypeSymbol, INamedTypeSymbol)> InvokableBaseTypes { get; }
 
         private static void ValidateBaseClass(LibraryTypes l, INamedTypeSymbol baseClass)
         {
@@ -242,6 +242,18 @@ namespace Orleans.CodeGenerator
                     throw new InvalidOperationException(notFoundMessage);
                 }
             }
+        }
+
+        private static ushort? GetId(LibraryTypes libraryTypes, ISymbol memberSymbol)
+        {
+            var idAttr = memberSymbol.GetAttributes().FirstOrDefault(attr => libraryTypes.IdAttributeTypes.Any(t => SymbolEqualityComparer.Default.Equals(t, attr.AttributeClass)));
+            if (idAttr is null)
+            {
+                return null;
+            }
+
+            var id = (ushort)idAttr.ConstructorArguments.First().Value;
+            return id;
         }
 
         private sealed class MethodSignatureComparer : IEqualityComparer<IMethodSymbol>, IComparer<IMethodSymbol>

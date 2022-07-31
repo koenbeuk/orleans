@@ -12,7 +12,7 @@ namespace Orleans.CodeGenerator;
 
 public partial class IncrementalSourceGenerator
 {
-    (ISerializableTypeDescription serializableTypeDescription, LibraryTypes libraryTypes) GetSemanticTargetForGeneration(((GeneratorSyntaxContext context, ImmutableArray<INamedTypeSymbol> attributeTypeSymbols), LibraryTypes libraryTypes) _, CancellationToken cancellationToken)
+    (ISerializableTypeDescription serializableTypeDescription, LibraryTypes libraryTypes) GetSemanticTargetForSerializerGeneration(((GeneratorSyntaxContext context, ImmutableArray<INamedTypeSymbol> attributeTypeSymbols), LibraryTypes libraryTypes) _, CancellationToken cancellationToken)
     {
         var ((context, attributeTypeSymbols), libraryTypes) = _;
 
@@ -202,19 +202,7 @@ public partial class IncrementalSourceGenerator
         return members.Values;
     }
 
-    static ushort? GetId(LibraryTypes libraryTypes, ISymbol memberSymbol)
-    {
-        var idAttr = memberSymbol.GetAttributes().FirstOrDefault(attr => libraryTypes.IdAttributeTypes.Any(t => SymbolEqualityComparer.Default.Equals(t, attr.AttributeClass)));
-        if (idAttr is null)
-        {
-            return null;
-        }
-
-        var id = (ushort)idAttr.ConstructorArguments.First().Value;
-        return id;
-    }
-
-    static void EmitSourceFile(SourceProductionContext context, (ISerializableTypeDescription serializableTypeDescription, LibraryTypes libraryTypes) _)
+    static void EmitSerializerSourceFile(SourceProductionContext context, (ISerializableTypeDescription serializableTypeDescription, LibraryTypes libraryTypes) _)
     {
         var (serializableTypeDescription, libraryTypes) = _;
 
