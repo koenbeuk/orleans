@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.Options;
 
 namespace Orleans.CodeGenerator.Tests;
@@ -29,6 +31,7 @@ public class GeneratorTestFixture<TUnitTest>
         var references = Basic.Reference.Assemblies.Net60.All.ToList();
         references.Add(MetadataReference.CreateFromFile(typeof(GenerateSerializerAttribute).Assembly.Location));
         references.Add(MetadataReference.CreateFromFile(typeof(IdAttribute).Assembly.Location));
+        references.Add(MetadataReference.CreateFromFile(typeof(IGrain).Assembly.Location));
         references.Add(MetadataReference.CreateFromFile(typeof(Serialization.Configuration.ITypeManifestProvider).Assembly.Location));
         references.Add(MetadataReference.CreateFromFile(typeof(IOptions<>).Assembly.Location));
 

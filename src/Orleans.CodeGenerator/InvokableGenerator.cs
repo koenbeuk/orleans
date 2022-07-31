@@ -656,15 +656,15 @@ namespace Orleans.CodeGenerator
             fields.Add(new TargetFieldDescription(method, interfaceDescription.InterfaceType));
 
             var methodTypeArguments = method.MethodTypeParameters.Select(p => p.Parameter.ToTypeSyntax(method.TypeParameterSubstitutions)).ToArray();
-            fields.Add(new TypeArrayFieldDescription(method, interfaceDescription.CodeGenerator.LibraryTypes.Type, "MethodTypeArgumentsBackingField", methodTypeArguments));
+            fields.Add(new TypeArrayFieldDescription(method, interfaceDescription.LibraryTypes.Type, "MethodTypeArgumentsBackingField", methodTypeArguments));
 
             var interfaceTypeArguments = method.Method.ContainingType.TypeArguments.Select(p => p.ToTypeSyntax(method.TypeParameterSubstitutions)).ToArray();
-            fields.Add(new TypeArrayFieldDescription(method, interfaceDescription.CodeGenerator.LibraryTypes.Type, "InterfaceTypeArgumentsBackingField", interfaceTypeArguments));
+            fields.Add(new TypeArrayFieldDescription(method, interfaceDescription.LibraryTypes.Type, "InterfaceTypeArgumentsBackingField", interfaceTypeArguments));
 
             var methodParameterTypes = method.Method.Parameters.Select(p => p.Type.ToTypeSyntax(method.TypeParameterSubstitutions)).ToArray();
-            fields.Add(new TypeArrayFieldDescription(method, interfaceDescription.CodeGenerator.LibraryTypes.Type, "ParameterTypesBackingField", methodParameterTypes));
+            fields.Add(new TypeArrayFieldDescription(method, interfaceDescription.LibraryTypes.Type, "ParameterTypesBackingField", methodParameterTypes));
 
-            fields.Add(new MethodInfoFieldDescription(method, interfaceDescription.CodeGenerator.LibraryTypes.MethodInfo, "MethodBackingField"));
+            fields.Add(new MethodInfoFieldDescription(method, interfaceDescription.LibraryTypes.MethodInfo, "MethodBackingField"));
 
             return fields;
         }

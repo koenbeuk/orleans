@@ -270,7 +270,7 @@ namespace Orleans.CodeGenerator
                 List<(IPropertySymbol, ushort)> dataMembers = new();
                 foreach (var property in symbol.GetDeclaredInstanceMembers<IPropertySymbol>())
                 {
-                    var id = CodeGenerator.GetId(libraryTypes, property);
+                    var id = IncrementalSourceGenerator.GetId(libraryTypes, property);
                     if (!id.HasValue)
                     {
                         continue;

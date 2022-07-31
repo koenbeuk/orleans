@@ -1160,7 +1160,7 @@ namespace Orleans.CodeGenerator
             IMemberDescription ISerializableMember.Member => _member;
             public MethodParameterFieldDescription Member => _member;
 
-            private LibraryTypes LibraryTypes => _member.Method.ContainingInterface.CodeGenerator.LibraryTypes;
+            private LibraryTypes LibraryTypes => _member.Method.ContainingInterface.LibraryTypes;
 
             public bool IsShallowCopyable => LibraryTypes.IsShallowCopyable(_member.Parameter.Type) || _member.Parameter.HasAnyAttribute(LibraryTypes.ImmutableAttributes);
 

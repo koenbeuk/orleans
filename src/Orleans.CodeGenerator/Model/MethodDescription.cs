@@ -50,7 +50,7 @@ namespace Orleans.CodeGenerator
             // Set defaults from the interface type.
             foreach (var pair in containingType.InvokableBaseTypes)
             {
-                InvokableBaseTypes[pair.Key] = pair.Value;
+                InvokableBaseTypes[pair.Item1] = pair.Item2;
             }
 
             // Set overrides from user-defined attributes on the method.
@@ -74,7 +74,7 @@ namespace Orleans.CodeGenerator
         {
             foreach (var methodAttr in method.GetAttributes())
             {
-                if (methodAttr.AttributeClass.GetAttributes(containingType.CodeGenerator.LibraryTypes.InvokableBaseTypeAttribute, out var attrs))
+                if (methodAttr.AttributeClass.GetAttributes(containingType.LibraryTypes.InvokableBaseTypeAttribute, out var attrs))
                 {
                     foreach (var attr in attrs)
                     {
@@ -92,7 +92,7 @@ namespace Orleans.CodeGenerator
                     }
                 }
 
-                if (methodAttr.AttributeClass.GetAttributes(containingType.CodeGenerator.LibraryTypes.InvokableCustomInitializerAttribute, out attrs))
+                if (methodAttr.AttributeClass.GetAttributes(containingType.LibraryTypes.InvokableCustomInitializerAttribute, out attrs))
                 {
                     foreach (var attr in attrs)
                     {

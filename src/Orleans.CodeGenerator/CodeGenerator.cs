@@ -231,13 +231,13 @@ namespace Orleans.CodeGenerator
                             var invokableBaseTypes = GetInvokableBaseTypes(proxyBaseTypeInvokableBaseTypes, baseClass);
 
                             var description = new InvokableInterfaceDescription(
-                                this,
+                                this.LibraryTypes,
                                 semanticModel,
                                 symbol,
                                 GetTypeAlias(symbol) ?? symbol.Name,
                                 baseClass,
                                 isExtension,
-                                invokableBaseTypes);
+                                invokableBaseTypes.Select(x => (x.Key, x.Value)));
                             metadataModel.InvokableInterfaces.Add(description);
                         }
                     }
@@ -566,7 +566,7 @@ namespace Orleans.CodeGenerator
 
         public ushort? GetId(ISymbol memberSymbol) => GetId(LibraryTypes, memberSymbol);
 
-        internal static ushort? GetId(LibraryTypes libraryTypes, ISymbol memberSymbol)
+        internal ushort? GetId(LibraryTypes libraryTypes, ISymbol memberSymbol)
         {
             var idAttr = memberSymbol.GetAttributes().FirstOrDefault(attr => libraryTypes.IdAttributeTypes.Any(t => SymbolEqualityComparer.Default.Equals(t, attr.AttributeClass)));
             if (idAttr is null)
