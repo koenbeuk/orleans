@@ -2,7 +2,6 @@
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);AWSUTILS_TESTS</DefineConstants>
     <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
-    <OrleansBuildTimeCodeGen>true</OrleansBuildTimeCodeGen>
   </PropertyGroup>
 
   <ItemGroup>

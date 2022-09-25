@@ -7,7 +7,6 @@
     <TargetFrameworks>$(StandardTargetFrameworks)</TargetFrameworks>
     <AssemblyName>Orleans.Streaming.AzureStorage</AssemblyName>
     <RootNamespace>Orleans.Streaming.AzureStorage</RootNamespace>
-    <OrleansBuildTimeCodeGen>true</OrleansBuildTimeCodeGen>
     <DefineConstants>$(DefineConstants);ORLEANS_STREAMING</DefineConstants>
   </PropertyGroup>
 

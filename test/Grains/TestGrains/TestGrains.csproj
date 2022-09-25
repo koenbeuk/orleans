@@ -2,7 +2,6 @@
   <PropertyGroup>
     <RootNamespace>UnitTests.Grains</RootNamespace>
     <TargetFramework>$(MinTestTargetFramework)</TargetFramework>
-    <OrleansBuildTimeCodeGen>true</OrleansBuildTimeCodeGen>
     <NoWarn>$(NoWarn);1591;1591;618</NoWarn>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>

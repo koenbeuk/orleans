@@ -7,7 +7,6 @@
     <TargetFrameworks>$(StandardTargetFrameworks)</TargetFrameworks>
     <AssemblyName>Orleans.Reminders.AzureStorage</AssemblyName>
     <RootNamespace>Orleans.Reminders.AzureStorage</RootNamespace>
-    <OrleansBuildTimeCodeGen>true</OrleansBuildTimeCodeGen>
     <DefineConstants>$(DefineConstants);ORLEANS_REMINDERS</DefineConstants>
   </PropertyGroup>
 

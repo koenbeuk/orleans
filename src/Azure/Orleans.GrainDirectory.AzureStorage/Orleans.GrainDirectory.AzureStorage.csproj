@@ -7,7 +7,6 @@
     <TargetFrameworks>$(StandardTargetFrameworks)</TargetFrameworks>
     <AssemblyName>Orleans.GrainDirectory.AzureStorage</AssemblyName>
     <RootNamespace>Orleans.GrainDirectory.AzureStorage</RootNamespace>
-    <OrleansBuildTimeCodeGen>true</OrleansBuildTimeCodeGen>
     <DefineConstants>$(DefineConstants);ORLEANS_DIRECTORY</DefineConstants>
   </PropertyGroup>
 

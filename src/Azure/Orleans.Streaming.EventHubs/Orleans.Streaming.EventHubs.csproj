@@ -8,7 +8,6 @@
     <TargetFrameworks>$(StandardTargetFrameworks)</TargetFrameworks>
     <AssemblyName>Orleans.Streaming.EventHubs</AssemblyName>
     <RootNamespace>Orleans.Streaming.EventHubs</RootNamespace>
-    <OrleansBuildTimeCodeGen>true</OrleansBuildTimeCodeGen>
   </PropertyGroup>
 
   <ItemGroup>

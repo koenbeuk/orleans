@@ -2,7 +2,6 @@
   <PropertyGroup>
     <RootNamespace>TestVersionGrains</RootNamespace>
     <AssemblyName>TestVersionGrains</AssemblyName>
-    <OrleansBuildTimeCodeGen>true</OrleansBuildTimeCodeGen>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>

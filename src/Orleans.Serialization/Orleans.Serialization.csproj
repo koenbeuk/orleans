@@ -5,7 +5,6 @@
     <PackageDescription>Fast, flexible, and version-tolerant serializer for .NET</PackageDescription>
     <TargetFrameworks>$(MultiTargetFrameworks)</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <OrleansBuildTimeCodeGen>true</OrleansBuildTimeCodeGen>
     <IsOrleansFrameworkPart>false</IsOrleansFrameworkPart>
   </PropertyGroup>
 
