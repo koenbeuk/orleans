@@ -89,7 +89,12 @@ partial class IncrementalSourceGenerator
 
         sb.AppendLine(MetadataGenerator.GenerateMetadata(invokableInterfaceDescription, metadataModel, libraryTypes).NormalizeWhitespace().ToFullString());
 
-        context.AddSource($"{invokableInterfaceDescription.Name}.g.cs", sb.ToString());
+        var generatedFileName = invokableInterfaceDescription.TypeParameters switch {
+            { Count: > 0 } => $"{invokableInterfaceDescription.GeneratedNamespace}.{invokableInterfaceDescription.Name}+{invokableInterfaceDescription.TypeParameters.Count}.g.cs",
+            _ => $"{invokableInterfaceDescription.GeneratedNamespace}.{invokableInterfaceDescription.Name}.g.cs"
+        };
+
+        context.AddSource(generatedFileName, sb.ToString());
     }
 
     static IEnumerable<(INamedTypeSymbol, INamedTypeSymbol)> GetInvokableBaseTypes(INamedTypeSymbol baseClass, LibraryTypes libraryTypes)

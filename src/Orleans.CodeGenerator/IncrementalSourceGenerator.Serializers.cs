@@ -230,7 +230,12 @@ public partial class IncrementalSourceGenerator
         sb.AppendLine();
         sb.AppendLine(MetadataGenerator.GenerateMetadata(serializableTypeDescription, libraryTypes).NormalizeWhitespace().ToFullString());
 
-        context.AddSource($"{serializableTypeDescription.Name}.g.cs", sb.ToString());
+        var generatedFileName = serializableTypeDescription.TypeParameters switch {
+            { Count: > 0 } => $"{serializableTypeDescription.GeneratedNamespace}.{serializableTypeDescription.Name}+{serializableTypeDescription.TypeParameters.Count}.g.cs",
+            _ => $"{serializableTypeDescription.GeneratedNamespace}.{serializableTypeDescription.Name}.g.cs"
+        };
+
+        context.AddSource(generatedFileName, sb.ToString());
     }
 }
     

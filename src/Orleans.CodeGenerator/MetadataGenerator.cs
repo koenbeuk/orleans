@@ -111,7 +111,7 @@ namespace Orleans.CodeGenerator
             );
 
             var interfaceType = libraryTypes.ITypeManifestProvider;
-            return ClassDeclaration("Metadata_" + invokableInterfaceDescription.Name)
+            return ClassDeclaration($"Metadata_{invokableInterfaceDescription.Name}_{invokableInterfaceDescription.TypeParameters.Count}")
                 .AddBaseListTypes(SimpleBaseType(interfaceType.ToTypeSyntax()))
                 .AddModifiers(Token(SyntaxKind.InternalKeyword), Token(SyntaxKind.SealedKeyword))
                 .AddAttributeLists(AttributeList(SingletonSeparatedList(CodeGenerator.GetGeneratedCodeAttributeSyntax())))
@@ -138,10 +138,10 @@ namespace Orleans.CodeGenerator
                             .AddArgumentListArguments(AttributeArgument(TypeOfExpression(QualifiedName(IdentifierName(invokableInterfaceTypeDescription.GeneratedNamespace), IdentifierName(GetSimpleClassName(invokableInterfaceTypeDescription))))))));
         }
 
-        public static string GetSimpleClassName(ISerializableTypeDescription serializableType) => GetSimpleClassName(serializableType.Name);
-        public static string GetSimpleClassName(InvokableInterfaceDescription invokableInterfaceType) => GetSimpleClassName(invokableInterfaceType.Name);
+        public static string GetSimpleClassName(ISerializableTypeDescription serializableType) => GetSimpleClassName(serializableType.Name, serializableType.TypeParameters.Count);
+        public static string GetSimpleClassName(InvokableInterfaceDescription invokableInterfaceType) => GetSimpleClassName(invokableInterfaceType.Name, invokableInterfaceType.InterfaceType.Arity);
 
-        public static string GetSimpleClassName(string name) => $"Metadata_{name}";
+        public static string GetSimpleClassName(string name, int arity) => $"Metadata_{name}_{arity}";
 
         public static ClassDeclarationSyntax GenerateMetadata(Compilation compilation, MetadataModel metadataModel, LibraryTypes libraryTypes)
         {
