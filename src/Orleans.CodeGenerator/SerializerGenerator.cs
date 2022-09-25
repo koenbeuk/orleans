@@ -84,9 +84,9 @@ namespace Orleans.CodeGenerator
             return classDeclaration;
         }
 
-        public static string GetSimpleClassName(ISerializableTypeDescription serializableType) => GetSimpleClassName(serializableType.Name);
+        public static string GetSimpleClassName(ISerializableTypeDescription serializableType) => GetSimpleClassName(serializableType.Name, serializableType.TypeParameters.Count);
 
-        public static string GetSimpleClassName(string name) => $"Codec_{name}";
+        public static string GetSimpleClassName(string name, int arity) => $"Codec_{name}_{arity}";
 
         public static string GetGeneratedNamespaceName(ITypeSymbol type) => type.GetNamespaceAndNesting() switch
         {
@@ -266,12 +266,12 @@ namespace Orleans.CodeGenerator
                     {
                         // Construct the full generic type name
                         var ns = ParseName(GetGeneratedNamespaceName(member.Type));
-                        var name = GenericName(Identifier(GetSimpleClassName(member.Type.Name)), TypeArgumentList(SeparatedList(namedTypeSymbol.TypeArguments.Select(arg => member.GetTypeSyntax(arg)))));
+                        var name = GenericName(Identifier(GetSimpleClassName(member.Type.Name, 0)), TypeArgumentList(SeparatedList(namedTypeSymbol.TypeArguments.Select(arg => member.GetTypeSyntax(arg)))));
                         codecType = QualifiedName(ns, name);
                     }
                     else
                     {
-                        var simpleName = $"{GetGeneratedNamespaceName(member.Type)}.{GetSimpleClassName(member.Type.Name)}";
+                        var simpleName = $"{GetGeneratedNamespaceName(member.Type)}.{GetSimpleClassName(member.Type.Name, 0)}";
                         codecType = ParseTypeName(simpleName);
                     }
                 }
