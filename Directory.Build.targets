@@ -4,24 +4,14 @@
     <InformationalVersion>$(Version). Commit Hash: $(GitHeadSha)</InformationalVersion>
   </PropertyGroup>
 
-  <!-- Begin Orleans: Without these lines the project won't build properly -->
-  <!-- Set path to code generator -->
-  <PropertyGroup>
-    <OrleansGenerateCodeDependsOn Condition=" '$(OrleansBuildTimeCodeGen)' == 'msbuild' ">$(OrleansGenerateCodeDependsOn)</OrleansGenerateCodeDependsOn>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(OrleansBuildTimeCodeGen)' == 'msbuild' ">
-    <DotNetHost Condition="'$(DotNetHost)' == ''">dotnet</DotNetHost>
-    <Asm>Orleans.CodeGenerator.MSBuild.Bootstrap</Asm>
-  </PropertyGroup>
-
   <ItemGroup>
     <!-- Enable code generator -->
     <ProjectReference
       Include="$(SourceRoot)src/Orleans.CodeGenerator/Orleans.CodeGenerator.csproj"
       ReferenceOutputAssembly="false"
-      OutputItemType="Analyzer"
-      Condition=" '$(OrleansBuildTimeCodeGen)' == 'true' "/>
+      OutputItemType="Analyzer" 
+      Condition=" '$(OrleansBuildTimeCodeGen)' != 'false' " />
+
     <ProjectReference
       Include="$(SourceRoot)src/Orleans.Analyzers/Orleans.Analyzers.csproj"
       ReferenceOutputAssembly="false"
@@ -29,7 +19,7 @@
       UndefineProperties="TargetFramework"
       SkipGetTargetFrameworkProperties="true"
       OutputItemType="Analyzer"
-      Condition=" '$(OrleansBuildTimeCodeGen)' == 'true' or '$(OrleansBuildTimeCodeGen)' == 'msbuild' "/>
+      Condition=" '$(OrleansBuildTimeCodeGen)' != 'false' "  />
   </ItemGroup>
 
 </Project>

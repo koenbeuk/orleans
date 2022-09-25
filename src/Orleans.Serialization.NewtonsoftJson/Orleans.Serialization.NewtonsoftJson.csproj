@@ -4,7 +4,6 @@
     <PackageId>Microsoft.Orleans.Serialization.NewtonsoftJson</PackageId>
     <TargetFrameworks>$(MultiTargetFrameworks)</TargetFrameworks>
     <PackageDescription>Newtonsoft.Json integration for Orleans.Serialization</PackageDescription>
-    <OrleansBuildTimeCodeGen>true</OrleansBuildTimeCodeGen>
     <IsOrleansFrameworkPart>false</IsOrleansFrameworkPart>
   </PropertyGroup>
 

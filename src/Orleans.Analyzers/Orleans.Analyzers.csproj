@@ -8,6 +8,7 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>
     <IsOrleansFrameworkPart>false</IsOrleansFrameworkPart>
+    <OrleansBuildTimeCodeGen>false</OrleansBuildTimeCodeGen>
   </PropertyGroup>
 
   <ItemGroup>

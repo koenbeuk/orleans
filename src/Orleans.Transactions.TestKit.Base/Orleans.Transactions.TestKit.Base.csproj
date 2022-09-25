@@ -5,7 +5,6 @@
     <Title>Microsoft Orleans Transactions test kit base</Title>
     <Description>Testkit base library for transactions</Description>
     <PackageTags>$(PackageTags) TransactionTestkKit</PackageTags>
-    <OrleansBuildTimeCodeGen>true</OrleansBuildTimeCodeGen>
     <IsOrleansFrameworkPart>false</IsOrleansFrameworkPart>
     <TargetFrameworks>$(StandardTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
