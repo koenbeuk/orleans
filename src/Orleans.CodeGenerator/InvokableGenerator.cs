@@ -500,9 +500,8 @@ namespace Orleans.CodeGenerator
 
         public static string GetSimpleClassName(InvokableInterfaceDescription interfaceDescription, MethodDescription method)
         {
-            var genericArity = method.AllTypeParameters.Count;
-            var typeArgs = genericArity > 0 ? "_" + genericArity : string.Empty;
-            return $"Invokable_{interfaceDescription.Name}_{interfaceDescription.ProxyBaseType.Name}_{method.Name}{typeArgs}";
+            var arity = method.AllTypeParameters.Count;
+            return $"Invokable_{interfaceDescription.Name}_{interfaceDescription.ProxyBaseType.Name}_{method.Name}_{arity}";
         }
 
         private static MemberDeclarationSyntax[] GetFieldDeclarations(

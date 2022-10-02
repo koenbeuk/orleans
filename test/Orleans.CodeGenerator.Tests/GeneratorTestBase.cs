@@ -17,6 +17,8 @@ public abstract class GeneratorTestBase<TSelf> : IClassFixture<GeneratorTestFixt
 
     protected abstract string SourceText { get; }
 
+    protected virtual int TypeArguments => 0;
+
     protected Compilation Compilation => _fixture.Compilation;
 
     protected GeneratorDriverRunResult DriverResult => _fixture.Driver;
@@ -24,7 +26,7 @@ public abstract class GeneratorTestBase<TSelf> : IClassFixture<GeneratorTestFixt
     [Fact]
     public void SourceTextProducedNoDiagnostics()
     {
-        Assert.Empty(_fixture.Compilation.GetDiagnostics());
+        Assert.Empty(_fixture.Compilation.GetDiagnostics().Where(x => x.Severity >= DiagnosticSeverity.Warning));
     }
 
     [Fact]
@@ -38,30 +40,37 @@ public abstract class GeneratorTestBase<TSelf> : IClassFixture<GeneratorTestFixt
     {
         var compilation = _fixture.CreateCompilation(SourceText, DriverResult.GeneratedTrees);
 
-        Assert.Empty(compilation.GetDiagnostics());
+        Assert.Empty(compilation.GetDiagnostics().Where(x => x.Severity >= DiagnosticSeverity.Warning));
     }
 
-
-    [Fact]
-    public void HasGeneratedTypeManifestProviderAttribute()
+    protected void AssertGeneratedTypeManifestProviderAttribute(string className)
     {
-        var generatedTree = Assert.Single(DriverResult.GeneratedTrees);
+        AttributeSyntax generatedAttributeSyntax = null;
 
-        var generatedSerializer = generatedTree.GetRoot()
-            .DescendantNodes()
-            .OfType<AttributeSyntax>()
-            .FirstOrDefault(x => x.Name.ToString() == "global::Orleans.Serialization.Configuration.TypeManifestProviderAttribute");
+        foreach (var generatedSyntaxTree in DriverResult.GeneratedTrees)
+        {
+            generatedAttributeSyntax = generatedSyntaxTree.GetRoot()
+                .DescendantNodes()
+                .OfType<AttributeSyntax>()
+                .Where(x => x.Name.ToString() == "global::Orleans.Serialization.Configuration.TypeManifestProviderAttribute")
+                .FirstOrDefault();
 
-        Assert.NotNull(generatedSerializer);
+            if (generatedAttributeSyntax is not null)
+            {
+                break;
+            }
+        }
+
+        Assert.NotNull(generatedAttributeSyntax);
     }
 
-    protected GeneratedCopierDescriptor AssertGeneratedCopier(string className, string generatedForName)
+    protected GeneratedCopierDescriptor AssertGeneratedCopier(string className, string generatedForName, int typeArguments)
     {
-        var artifact = AssertGeneratedArtifact(className, generatedForName);
+        var artifact = AssertGeneratedArtifact(className, generatedForName, typeArguments);
         return new GeneratedCopierDescriptor(artifact);
     }
 
-    protected ClassDeclarationSyntax AssertGeneratedArtifact(string className, string generatedForName)
+    protected ClassDeclarationSyntax AssertGeneratedArtifact(string className, string generatedForName, int typeArguments)
     {
         ClassDeclarationSyntax foundGeneratedClass = null;
         var foundGeneratedMetadataRegistration = false;
@@ -81,7 +90,7 @@ public abstract class GeneratorTestBase<TSelf> : IClassFixture<GeneratorTestFixt
             var generatedMetadataSyntax = generatedSyntaxTree.GetRoot()
                 .DescendantNodes()
                 .OfType<ClassDeclarationSyntax>()
-                .FirstOrDefault(x => x.Identifier.ValueText == $"Metadata_{generatedForName}");
+                .FirstOrDefault(x => x.Identifier.ValueText == $"Metadata_{generatedForName}_{typeArguments}");
 
             if (generatedMetadataSyntax is not null)
             {
@@ -102,7 +111,7 @@ public abstract class GeneratorTestBase<TSelf> : IClassFixture<GeneratorTestFixt
             }
         }
 
-        Assert.NotNull(foundGeneratedClass);
+        Assert.True(foundGeneratedClass is not null, $"Expected class {className} to have been generated for {generatedForName}. Found none");
         Assert.True(foundGeneratedMetadataRegistration, $"Expected class {className} to have been registered as metadata, found none");
 
         return foundGeneratedClass;

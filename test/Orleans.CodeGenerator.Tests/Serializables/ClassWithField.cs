@@ -12,12 +12,10 @@ public class ClassWithField : SerialiableGeneratorTestBase<ClassWithField>
     {
     }
 
-    protected override string SourceText { get; } = @"
+    protected override string SourceText => @"
         [Orleans.GenerateSerializer]
         public class Test {
             [Orleans.Id(0)]
             public int A;
         }";
-
-    protected override string SymbolName => "Test";
 }

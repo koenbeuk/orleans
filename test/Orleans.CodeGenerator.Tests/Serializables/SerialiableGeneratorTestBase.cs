@@ -15,31 +15,38 @@ public abstract class SerialiableGeneratorTestBase<TSelf> : GeneratorTestBase<TS
     {
     }
 
-    protected abstract string SymbolName { get; }
+    protected virtual string SymbolName => "Test";
 
     [Fact]
     public void GeneratedTreeIsNamedAfterType()
     {
         var generatedTree = Assert.Single(DriverResult.GeneratedTrees);
 
-        Assert.EndsWith($"{SymbolName}.g.cs", generatedTree.FilePath);
+        var expectedFileName = TypeArguments is 0 ? $"{SymbolName}.g.cs" : $"{SymbolName}+{TypeArguments}.g.cs";
+        Assert.EndsWith(expectedFileName, generatedTree.FilePath);
+    }
+
+    [Fact]
+    public void HasGeneratedTypeManifestProviderAttribute()
+    {
+        AssertGeneratedTypeManifestProviderAttribute($"Metadata_{SymbolName}_{TypeArguments}");
     }
 
     [Fact]
     public void HasGeneratedCodec()
     {
-        AssertGeneratedArtifact($"Codec_{SymbolName}", SymbolName);
+        AssertGeneratedArtifact($"Codec_{SymbolName}", SymbolName, TypeArguments);
     }
 
     [Fact]
     public void HasGeneratedCopier()
     {
-        AssertGeneratedCopier($"Copier_{SymbolName}", SymbolName);
+        AssertGeneratedCopier($"Copier_{SymbolName}", SymbolName, TypeArguments);
     }
 
     [Fact]
     public void HasGeneratedActivator()
     {
-        AssertGeneratedArtifact($"Activator_{SymbolName}", SymbolName);
+        AssertGeneratedArtifact($"Activator_{SymbolName}", SymbolName, TypeArguments);
     }
 }
