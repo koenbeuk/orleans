@@ -27,7 +27,7 @@ public class InvokableMethodGeneratorTests : GeneratorTestBase<InvokableMethodGe
         var generatedMethodInvoker = generatedTree.GetRoot()
             .DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
-            .FirstOrDefault(x => x.Identifier.ValueText == "Invokable_ITest_GrainReference_1");
+            .FirstOrDefault(x => x.Identifier.ValueText == "Invokable_ITest_GrainReference_1_0");
 
         Assert.NotNull(generatedMethodInvoker);
     }
@@ -53,7 +53,7 @@ public class InvokableMethodGeneratorTests : GeneratorTestBase<InvokableMethodGe
         var generatedMethodInvoker = generatedTree.GetRoot()
             .DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
-            .FirstOrDefault(x => x.Identifier.ValueText == "Codec_Invokable_ITest_GrainReference_1");
+            .FirstOrDefault(x => x.Identifier.ValueText == "Codec_Invokable_ITest_GrainReference_1_0");
 
         Assert.NotNull(generatedMethodInvoker);
     }
@@ -61,13 +61,13 @@ public class InvokableMethodGeneratorTests : GeneratorTestBase<InvokableMethodGe
     [Fact]
     public void HasGeneratedMethodInvokerCopier()
     {
-        AssertGeneratedCopier("Copier_Invokable_ITest_GrainReference_1", "ITest");
+        AssertGeneratedCopier("Copier_Invokable_ITest_GrainReference_1_0", "ITest", 0);
     }
 
     [Fact]
     public void HasGeneratedMethodInvokerActivator()
     {
-        AssertGeneratedArtifact("Activator_Invokable_ITest_GrainReference_1", "ITest");
+        AssertGeneratedArtifact("Activator_Invokable_ITest_GrainReference_1_0", "ITest", 0);
     }
 
 
@@ -79,7 +79,7 @@ public class InvokableMethodGeneratorTests : GeneratorTestBase<InvokableMethodGe
         var generatedSerializer = generatedTree.GetRoot()
             .DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
-            .FirstOrDefault(x => x.Identifier.ValueText == "Metadata_ITest");
+            .FirstOrDefault(x => x.Identifier.ValueText == "Metadata_ITest_0");
 
         Assert.NotNull(generatedSerializer);
     }

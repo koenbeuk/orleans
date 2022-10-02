@@ -107,7 +107,7 @@ namespace Orleans.CodeGenerator
                         configParam.Member("Interfaces").Member("Add"),
                         ArgumentList(
                             SingletonSeparatedList(
-                                Argument(TypeOfExpression(invokableInterfaceDescription.InterfaceType.ToNameSyntax()))))))
+                                Argument(TypeOfExpression(invokableInterfaceDescription.InterfaceType.ToOpenTypeSyntax()))))))
             );
 
             var interfaceType = libraryTypes.ITypeManifestProvider;
@@ -139,7 +139,7 @@ namespace Orleans.CodeGenerator
         }
 
         public static string GetSimpleClassName(ISerializableTypeDescription serializableType) => GetSimpleClassName(serializableType.Name, serializableType.TypeParameters.Count);
-        public static string GetSimpleClassName(InvokableInterfaceDescription invokableInterfaceType) => GetSimpleClassName(invokableInterfaceType.Name, invokableInterfaceType.InterfaceType.Arity);
+        public static string GetSimpleClassName(InvokableInterfaceDescription invokableInterfaceType) => GetSimpleClassName(invokableInterfaceType.Name, invokableInterfaceType.TypeParameters.Count);
 
         public static string GetSimpleClassName(string name, int arity) => $"Metadata_{name}_{arity}";
 
