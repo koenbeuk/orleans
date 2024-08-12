@@ -13,7 +13,7 @@ namespace Orleans.CodeGenerator
 
         public static IPropertySymbol? GetMatchingProperty(IFieldSymbol field)
         {
-            if (field.ContainingType is null)
+            if (field?.ContainingType is null)
                 return null;
             return GetMatchingProperty(field, field.ContainingType.GetMembers());
         }

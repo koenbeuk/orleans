@@ -10,6 +10,7 @@ using Orleans.CodeGeneration;
 using System.Text;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Orleans.Runtime
 {
@@ -429,6 +430,11 @@ namespace Orleans.Runtime
         protected void Invoke(IRequest methodDescription)
         {
             this.Runtime.InvokeMethod(this, methodDescription, methodDescription.Options);
+        }
+
+        protected void Cancel(Guid cancellableToken)
+        {
+            this.AsReference<ICancellationSourcesExtension>().CancelInvokable(cancellableToken).Ignore();
         }
     }
 

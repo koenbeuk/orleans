@@ -30,6 +30,7 @@ namespace Orleans.CodeGenerator
             var generatedClassName = GetSimpleClassName(invokableMethodInfo);
 
             var baseClassType = GetBaseClassType(invokableMethodInfo);
+            var additionalInterfaceTypes = GetAdditionalInterfaceTypes(invokableMethodInfo);
             var fieldDescriptions = GetFieldDescriptions(invokableMethodInfo);
             var fields = GetFieldDeclarations(invokableMethodInfo, fieldDescriptions);
             var (ctor, ctorArgs) = GenerateConstructor(generatedClassName, invokableMethodInfo, baseClassType);
@@ -58,6 +59,7 @@ namespace Orleans.CodeGenerator
                 invokableMethodInfo,
                 generatedClassName,
                 baseClassType,
+                additionalInterfaceTypes,
                 fieldDescriptions,
                 fields,
                 ctor,
@@ -112,6 +114,7 @@ namespace Orleans.CodeGenerator
             InvokableMethodDescription method,
             string generatedClassName,
             INamedTypeSymbol baseClassType,
+            INamedTypeSymbol[] additionalInterfaceTypes,
             List<InvokerFieldDescription> fieldDescriptions,
             MemberDeclarationSyntax[] fields,
             ConstructorDeclarationSyntax ctor,
@@ -124,6 +127,14 @@ namespace Orleans.CodeGenerator
                 .AddModifiers(Token(accessibilityKind), Token(SyntaxKind.SealedKeyword))
                 .AddAttributeLists(CodeGenerator.GetGeneratedCodeAttributes())
                 .AddMembers(fields);
+
+            if (additionalInterfaceTypes.Length > 0)
+            {
+                foreach (var interfaceType in additionalInterfaceTypes)
+                {
+                    classDeclaration = classDeclaration.AddBaseListTypes(SimpleBaseType(interfaceType.ToTypeSyntax()));
+                }
+            }
 
             foreach (var alias in compoundTypeAliases)
             {
@@ -153,7 +164,8 @@ namespace Orleans.CodeGenerator
                     GenerateDisposeMethod(fieldDescriptions, baseClassType),
                     GenerateGetArgumentMethod(method, fieldDescriptions),
                     GenerateSetArgumentMethod(method, fieldDescriptions),
-                    GenerateInvokeInnerMethod(method, fieldDescriptions, targetField));
+                    GenerateInvokeInnerMethod(method, fieldDescriptions, targetField),
+                    GenerateGetCancellableTokenIdMember(method));
 
             if (method.AllTypeParameters.Count > 0)
             {
@@ -272,6 +284,18 @@ namespace Orleans.CodeGenerator
             }
 
             throw new OrleansGeneratorDiagnosticAnalysisException(InvalidRpcMethodReturnTypeDiagnostic.CreateDiagnostic(method));
+        }
+
+        private INamedTypeSymbol[] GetAdditionalInterfaceTypes(InvokableMethodDescription method)
+        {
+            if (method.IsCancellable)
+            {
+                // TODO: Raise diagnostic if the method has multiple CancellationToken parameters.s
+
+                return [LibraryTypes.ICancellableInvokable];
+            }
+
+            return []; 
         }
 
         private MemberDeclarationSyntax GenerateSetTargetMethod(
@@ -489,6 +513,23 @@ namespace Orleans.CodeGenerator
                 .WithModifiers(TokenList(Token(SyntaxKind.ProtectedKeyword), Token(SyntaxKind.OverrideKeyword)));
         }
 
+        private MemberDeclarationSyntax GenerateGetCancellableTokenIdMember(InvokableMethodDescription method)
+        {
+            if (!method.IsCancellable)
+            {
+                return null;
+            }
+
+            // Method to get the CancellableTokenId
+            var cancellableRequestIdMethod = MethodDeclaration(LibraryTypes.Guid.ToTypeSyntax(), "GetCancellableTokenId")
+                .WithBody(Block(
+                    ReturnStatement(IdentifierName("cancellableTokenId"))
+                ))
+                .AddModifiers(Token(SyntaxKind.PublicKeyword));
+
+            return cancellableRequestIdMethod;
+        }
+
         private MemberDeclarationSyntax GenerateDisposeMethod(
             List<InvokerFieldDescription> fields,
             INamedTypeSymbol baseClassType)
@@ -635,6 +676,9 @@ namespace Orleans.CodeGenerator
                     case MethodParameterFieldDescription _:
                         field = field.AddModifiers(Token(SyntaxKind.PublicKeyword));
                         break;
+                    case CancellableTokenFieldDescription _:
+                        field = field.AddModifiers(Token(SyntaxKind.PublicKeyword));
+                        break;
                 }
 
                 return field;
@@ -710,6 +754,12 @@ namespace Orleans.CodeGenerator
             var fields = new List<InvokerFieldDescription>();
 
             uint fieldId = 0;
+
+            if (method.IsCancellable)
+            {
+                fields.Add(new CancellableTokenFieldDescription(LibraryTypes.Guid, "cancellableTokenId", fieldId, method.ContainingInterface));
+            }
+
             foreach (var parameter in method.Method.Parameters)
             {
                 fields.Add(new MethodParameterFieldDescription(method.CodeGenerator, parameter, $"arg{fieldId}", fieldId, method.TypeParameterSubstitutions));
@@ -812,6 +862,35 @@ namespace Orleans.CodeGenerator
 
             public override bool IsSerializable => false;
             public override bool IsInstanceField => false;
+        }
+
+        internal sealed class CancellableTokenFieldDescription : InvokerFieldDescription, IMemberDescription
+        {
+            public CancellableTokenFieldDescription(
+                ITypeSymbol fieldType,
+                string fieldName,
+                uint fieldId,
+                INamedTypeSymbol containingType) : base(fieldType, fieldName)
+            {
+                FieldId = fieldId;
+                ContainingType = containingType;
+            }
+
+            public IFieldSymbol Field => null;
+            public uint FieldId { get; }
+            public ISymbol Symbol => FieldType;
+            public ITypeSymbol Type => FieldType;
+            public INamedTypeSymbol ContainingType { get; }
+            public string AssemblyName => Type.ContainingAssembly.ToDisplayName();
+            public TypeSyntax TypeSyntax => Type.ToTypeSyntax();
+            public string TypeName => Type.ToDisplayName();
+            public string TypeNameIdentifier => Type.GetValidIdentifier();
+            public bool IsPrimaryConstructorParameter => false;
+
+            public TypeSyntax GetTypeSyntax(ITypeSymbol typeSymbol) => TypeSyntax;
+
+            public override bool IsSerializable => true;
+            public override bool IsInstanceField => true;
         }
     }
 }

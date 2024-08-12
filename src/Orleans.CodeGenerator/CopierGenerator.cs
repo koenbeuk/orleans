@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -51,6 +52,10 @@ namespace Orleans.CodeGenerator
                 else if (member is MethodParameterFieldDescription methodParameter)
                 {
                     members.Add(new SerializableMethodMember(methodParameter));
+                }
+                else if (member is CancellableTokenFieldDescription cancellableTokenFieldDescription)
+                {
+                    members.Add(new SerializableCancellableTokenMember(_codeGenerator, cancellableTokenFieldDescription));
                 }
             }
 

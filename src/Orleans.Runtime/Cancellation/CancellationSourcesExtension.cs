@@ -14,12 +14,15 @@ namespace Orleans.Runtime
     /// </summary>
     internal class CancellationSourcesExtension : ICancellationSourcesExtension, IDisposable
     {
-        private readonly ConcurrentDictionary<Guid, Entry> _cancellationTokens = new ConcurrentDictionary<Guid, Entry>();
         private readonly ILogger _logger;
         private readonly IGrainCancellationTokenRuntime _cancellationTokenRuntime;
         private readonly Timer _cleanupTimer;
-        private readonly Func<Guid, Entry> _createToken;
+        private readonly Func<Guid, Entry<GrainCancellationToken>> _createGrainCancellationTokenEntry;
+        private readonly Func<Guid, Entry<CancellationTokenSource>> _createCancellationTokenEntry;
         private static readonly TimeSpan _cleanupFrequency = TimeSpan.FromMinutes(7);
+
+        private ConcurrentDictionary<Guid, Entry<GrainCancellationToken>> _grainCancellationTokens;
+        private ConcurrentDictionary<Guid, Entry<CancellationTokenSource>> _cancellationTokens;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CancellationSourcesExtension"/> class.
@@ -31,12 +34,34 @@ namespace Orleans.Runtime
             _logger = loggerFactory.CreateLogger<CancellationSourcesExtension>();
             _cancellationTokenRuntime = cancellationRuntime;
             _cleanupTimer = new Timer(obj => ((CancellationSourcesExtension)obj).ExpireTokens(), this, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
-            _createToken = id => new Entry(new GrainCancellationToken(id, false, _cancellationTokenRuntime));
+            _createGrainCancellationTokenEntry = id => new Entry<GrainCancellationToken>(new GrainCancellationToken(id, false, _cancellationTokenRuntime));
+            _createCancellationTokenEntry = id => new Entry<CancellationTokenSource>(new CancellationTokenSource());
         }
 
         /// <inheritdoc />
         public Task CancelRemoteToken(Guid tokenId)
         {
+            _grainCancellationTokens ??= new ConcurrentDictionary<Guid, Entry<GrainCancellationToken>>();
+
+            if (!_grainCancellationTokens.TryGetValue(tokenId, out var entry))
+            {
+                _logger.LogWarning((int)ErrorCode.CancellationTokenCancelFailed, "Received a cancel call for token with id {TokenId}, but the token was not found", tokenId);
+
+                // Record the cancellation anyway, in case the call which would have registered the cancellation is still pending.
+                this.RecordGrainCancellationToken(tokenId, isCancellationRequested: true);
+                return Task.CompletedTask;
+            }
+
+            entry.Touch();
+            var token = entry.Token;
+            return token.Cancel();
+        }
+
+        /// <inheritdoc />
+        public Task CancelInvokable(Guid tokenId)
+        {
+            _cancellationTokens ??= new ConcurrentDictionary<Guid, Entry<CancellationTokenSource>>();
+
             if (!_cancellationTokens.TryGetValue(tokenId, out var entry))
             {
                 _logger.LogWarning((int)ErrorCode.CancellationTokenCancelFailed, "Received a cancel call for token with id {TokenId}, but the token was not found", tokenId);
@@ -48,8 +73,10 @@ namespace Orleans.Runtime
 
             entry.Touch();
             var token = entry.Token;
-            return token.Cancel();
+            token.Cancel();
+            return Task.CompletedTask;
         }
+
 
         /// <summary>
         /// Adds <see cref="CancellationToken"/> to the grain extension so that it can be canceled through remote call to the CancellationSourcesExtension.
@@ -60,31 +87,82 @@ namespace Orleans.Runtime
             IGrainContext target,
             IInvokable request)
         {
-            var argumentCount = request.GetArgumentCount();
-            for (var i = 0; i < argumentCount; i++)
+            RegisterCancellationToken(target, request);
+            RegisterGrainCancellationTokens(target, request);
+
+            static void RegisterCancellationToken(IGrainContext target, IInvokable request)
             {
-                var arg = request.GetArgument(i);
-                if (arg is not GrainCancellationToken grainToken)
+                if (request is not ICancellableInvokable cancellableInvokable)
                 {
-                    continue;
+                    // This is not a cancellable request, so we don't need to do anything.
+                    return;
                 }
 
-                var cancellationExtension = (CancellationSourcesExtension)target.GetGrainExtension<ICancellationSourcesExtension>();
+                var argumentCount = request.GetArgumentCount();
+                for (var i = 0; i < argumentCount; i++)
+                {
+                    var arg = request.GetArgument(i);
+                    if (arg is CancellationToken cancellationToken)
+                    {
+                        var cancellationExtension = (CancellationSourcesExtension)target.GetGrainExtension<ICancellationSourcesExtension>();
 
-                // Replacing the half baked GrainCancellationToken that came from the wire with locally fully created one.
-                request.SetArgument(i, cancellationExtension.RecordCancellationToken(grainToken.Id, grainToken.IsCancellationRequested));
+                        // Replacing the half baked CancellationToken that came from the wire with locally fully created one.
+                        var tokenId = cancellableInvokable.GetCancellableTokenId();
+                        request.SetArgument(i, cancellationExtension.RecordCancellationToken(tokenId, cancellationToken.IsCancellationRequested).Token);
+
+                        // We found the cancellation token, so we can stop looking.
+                        return; 
+                    }
+                }
+            }
+
+            static void RegisterGrainCancellationTokens(IGrainContext target, IInvokable request)
+            {
+                var argumentCount = request.GetArgumentCount();
+                for (var i = 0; i < argumentCount; i++)
+                {
+                    var arg = request.GetArgument(i);
+                    if (arg is GrainCancellationToken grainToken)
+                    {
+                        var cancellationExtension = (CancellationSourcesExtension)target.GetGrainExtension<ICancellationSourcesExtension>();
+
+                        // Replacing the half baked GrainCancellationToken that came from the wire with locally fully created one.
+                        request.SetArgument(i, cancellationExtension.RecordGrainCancellationToken(grainToken.Id, grainToken.IsCancellationRequested));
+                    }
+                }
             }
         }
 
-        private GrainCancellationToken RecordCancellationToken(Guid tokenId, bool isCancellationRequested)
+        private GrainCancellationToken RecordGrainCancellationToken(Guid tokenId, bool isCancellationRequested)
         {
+            _grainCancellationTokens ??= new ConcurrentDictionary<Guid, Entry<GrainCancellationToken>>();
+
+            if (_grainCancellationTokens.TryGetValue(tokenId, out var entry))
+            {
+                entry.Touch();
+                return entry.Token;
+            }
+
+            entry = _grainCancellationTokens.GetOrAdd(tokenId, _createGrainCancellationTokenEntry);
+            if (isCancellationRequested)
+            {
+                entry.Token.Cancel();
+            }
+
+            return entry.Token;
+        }
+
+        private CancellationTokenSource RecordCancellationToken(Guid tokenId, bool isCancellationRequested)
+        {
+            _cancellationTokens ??= new ConcurrentDictionary<Guid, Entry<CancellationTokenSource>>();
+
             if (_cancellationTokens.TryGetValue(tokenId, out var entry))
             {
                 entry.Touch();
                 return entry.Token;
             }
 
-            entry = _cancellationTokens.GetOrAdd(tokenId, _createToken);
+            entry = _cancellationTokens.GetOrAdd(tokenId, _createCancellationTokenEntry);
             if (isCancellationRequested)
             {
                 entry.Token.Cancel();
@@ -96,11 +174,25 @@ namespace Orleans.Runtime
         private void ExpireTokens()
         {
             var now = Stopwatch.GetTimestamp();
-            foreach (var token in _cancellationTokens)
+            if (_grainCancellationTokens is not null)
             {
-                if (token.Value.IsExpired(_cleanupFrequency, now))
+                foreach (var token in _grainCancellationTokens)
                 {
-                    _cancellationTokens.TryRemove(token.Key, out _);
+                    if (token.Value.IsExpired(_cleanupFrequency, now))
+                    {
+                        _grainCancellationTokens.TryRemove(token.Key, out _);
+                    }
+                }
+            }
+
+            if (_cancellationTokens is not null)
+            {
+                foreach (var token in _cancellationTokens)
+                {
+                    if (token.Value.IsExpired(_cleanupFrequency, now))
+                    {
+                        _grainCancellationTokens.TryRemove(token.Key, out _);
+                    }
                 }
             }
         }
@@ -111,11 +203,11 @@ namespace Orleans.Runtime
             _cleanupTimer.Dispose();
         }
 
-        private class Entry
+        private class Entry<TCancellationToken>
         {
             private long _createdTime;
 
-            public Entry(GrainCancellationToken token)
+            public Entry(TCancellationToken token)
             {
                 Token = token;
                 _createdTime = Stopwatch.GetTimestamp();
@@ -123,7 +215,7 @@ namespace Orleans.Runtime
 
             public void Touch() => _createdTime = Stopwatch.GetTimestamp();
 
-            public GrainCancellationToken Token { get; }
+            public TCancellationToken Token { get; }
 
             public bool IsExpired(TimeSpan expiry, long nowTimestamp)
             {
