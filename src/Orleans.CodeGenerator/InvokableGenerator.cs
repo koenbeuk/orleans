@@ -290,7 +290,11 @@ namespace Orleans.CodeGenerator
         {
             if (method.IsCancellable)
             {
-                // TODO: Raise diagnostic if the method has multiple CancellationToken parameters.s
+                var cancellationTokensCount = method.Method.Parameters.Count(parameterSymbol => SymbolEqualityComparer.Default.Equals(method.CodeGenerator.LibraryTypes.CancellationToken, parameterSymbol.Type));
+                if (cancellationTokensCount is > 1)
+                {
+                    throw new OrleansGeneratorDiagnosticAnalysisException(MultipleCancellationTokenParametersDiagnostic.CreateDiagnostic(method.Method));
+                }
 
                 return [LibraryTypes.ICancellableInvokable];
             }
