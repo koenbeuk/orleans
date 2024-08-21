@@ -738,6 +738,16 @@ namespace Orleans.CodeGenerator
                 body.Add(ExpressionStatement(InvocationExpression(IdentifierName(methodName), ArgumentList(SeparatedList(new[] { Argument(argumentExpression) })))));
             }
 
+            if (method.IsCancellable)
+            {
+                body.Add(
+                    ExpressionStatement(
+                        AssignmentExpression(
+                            SyntaxKind.SimpleAssignmentExpression,
+                            IdentifierName("cancellableTokenId"),
+                            InvocationExpression(LibraryTypes.Guid.ToTypeSyntax().Member("NewGuid")))));  
+            }
+
             if (body.Count == 0 && parameters.Count == 0)
                 return default;
 

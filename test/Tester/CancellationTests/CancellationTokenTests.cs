@@ -88,6 +88,23 @@ namespace UnitTests.CancellationTests
         }
 
         [Fact, TestCategory("BVT"), TestCategory("Cancellation")]
+        public async Task MultipleGrainTasksSingleCancellation()
+        {
+            var grain = this.fixture.GrainFactory.GetGrain<ILongRunningTaskGrain<bool>>(Guid.NewGuid());
+
+            var primaryTsc = new CancellationTokenSource();
+            var primaryTask = grain.LongWait(primaryTsc.Token, TimeSpan.FromSeconds(10));
+            var otherTsc = new CancellationTokenSource();
+            var otherGrainTask = grain.LongWait(otherTsc.Token, TimeSpan.FromSeconds(10));
+
+            primaryTsc.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => primaryTask);
+
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
+            Assert.Equal(TaskStatus.Running, otherGrainTask.Status);
+        }
+
+        [Fact, TestCategory("BVT"), TestCategory("Cancellation")]
         public async Task TokenPassingWithoutCancellation_NoExceptionShouldBeThrown()
         {
             var grain = this.fixture.GrainFactory.GetGrain<ILongRunningTaskGrain<bool>>(Guid.NewGuid());
