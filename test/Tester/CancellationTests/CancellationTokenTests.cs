@@ -193,7 +193,7 @@ namespace UnitTests.CancellationTests
             var grainTask = grain.CallOtherLongRunningTask(target, tcs.Token, TimeSpan.FromSeconds(10));
             await Task.Delay(TimeSpan.FromMilliseconds(delay));
             await tcs.CancelAsync();
-            await Assert.ThrowsAsync<OperationCanceledException>(() => grainTask);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => grainTask);
         }
 
         private async Task GrainGrainCancellation(bool interSilo, int delay)
@@ -203,7 +203,7 @@ namespace UnitTests.CancellationTests
             var target = grains.Item2;
             var grainTask = grain.CallOtherLongRunningTaskWithLocalToken(target, TimeSpan.FromSeconds(10),
                 TimeSpan.FromMilliseconds(delay));
-            await Assert.ThrowsAsync<TaskCanceledException>(() => grainTask);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => grainTask);
         }
 
         private async Task<Tuple<ILongRunningTaskGrain<T1>, ILongRunningTaskGrain<T1>>> GetGrains<T1>(bool placeOnDifferentSilos = true)
