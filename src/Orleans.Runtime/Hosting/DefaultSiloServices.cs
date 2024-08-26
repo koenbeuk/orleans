@@ -132,6 +132,7 @@ namespace Orleans.Hosting
             // Directory
             services.TryAddSingleton<LocalGrainDirectory>();
             services.TryAddFromExisting<ILocalGrainDirectory, LocalGrainDirectory>();
+            services.AddFromExisting<ILifecycleParticipant<ISiloLifecycle>, LocalGrainDirectory>();
             services.AddSingleton<GrainLocator>();
             services.AddSingleton<GrainLocatorResolver>();
             services.AddSingleton<DhtGrainLocator>(sp => DhtGrainLocator.FromLocalGrainDirectory(sp.GetService<LocalGrainDirectory>()));
@@ -154,6 +155,7 @@ namespace Orleans.Hosting
             services.TryAddSingleton<IFatalErrorHandler, FatalErrorHandler>();
 
             services.TryAddSingleton<DeploymentLoadPublisher>();
+            services.AddFromExisting<ILifecycleParticipant<ISiloLifecycle>, DeploymentLoadPublisher>();
 
             services.TryAddSingleton<IAsyncTimerFactory, AsyncTimerFactory>();
             services.TryAddSingleton<MembershipTableManager>();
@@ -161,6 +163,7 @@ namespace Orleans.Hosting
             services.AddFromExisting<ILifecycleParticipant<ISiloLifecycle>, MembershipTableManager>();
             services.TryAddSingleton<MembershipSystemTarget>();
             services.AddFromExisting<IMembershipService, MembershipSystemTarget>();
+            services.AddFromExisting<ILifecycleParticipant<ISiloLifecycle>, MembershipSystemTarget>();
             services.TryAddSingleton<IMembershipGossiper, MembershipGossiper>();
             services.TryAddSingleton<IRemoteSiloProber, RemoteSiloProber>();
             services.TryAddSingleton<SiloStatusOracle>();

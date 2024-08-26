@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -94,11 +95,6 @@ namespace Orleans.Streams
         /// <returns></returns>
         public Task Initialize()
         {
-            return OrleansTaskExtentions.WrapInTask(() => InitializeInternal());
-        }
-
-        private void InitializeInternal()
-        {
             logger.LogInformation(
                 (int)ErrorCode.PersistentStreamPullingAgent_02,
                 "Init of {Name} {Id} on silo {Silo} for queue {Queue}.",
@@ -138,8 +134,10 @@ namespace Orleans.Streams
                     .LogException(logger, ErrorCode.PersistentStreamPullingAgent_03, $"QueueAdapterReceiver {QueueId:H} failed to Initialize.");
                 receiverInitTask.Ignore();
             }
-            catch
+            catch (Exception exception)
             {
+                logger.LogError((int)ErrorCode.PersistentStreamPullingAgent_03, exception, "QueueAdapterReceiver {QueueId} failed to Initialize.", QueueId);
+
                 // Just ignore this exception and proceed as if Initialize has succeeded.
                 // We already logged individual exceptions for individual calls to Initialize. No need to log again.
             }
@@ -152,6 +150,7 @@ namespace Orleans.Streams
             StreamInstruments.RegisterPersistentStreamPubSubCacheSizeObserve(() => new Measurement<int>(pubSubCache.Count, new KeyValuePair<string, object>("name", StatisticUniquePostfix)));
 
             logger.LogInformation((int)ErrorCode.PersistentStreamPullingAgent_04, "Taking queue {Queue} under my responsibility.", QueueId.ToStringWithHashCode());
+            return Task.CompletedTask;
         }
 
         public async Task Shutdown()
@@ -256,6 +255,7 @@ namespace Orleans.Streams
 
             if (await DoHandshakeWithConsumer(data, cacheToken))
             {
+                data.IsRegistered = true;
                 if (data.State == StreamConsumerDataState.Inactive)
                     RunConsumerCursor(data).Ignore(); // Start delivering events if not actively doing so
             }
@@ -485,18 +485,7 @@ namespace Orleans.Streams
                 if (pubSubCache.TryGetValue(streamId, out streamData))
                 {
                     streamData.RefreshActivity(now);
-                    if (streamData.StreamRegistered)
-                    {
-                        StartInactiveCursors(streamData,
-                            startToken); // if this is an existing stream, start any inactive cursors
-                    }
-                    else
-                    {
-                        if(this.logger.IsEnabled(LogLevel.Debug))
-                            this.logger.LogDebug(
-                                $"Pulled new messages in stream {streamId} from the queue, but pulling agent haven't succeeded in" +
-                                                              $"RegisterStream yet, will start deliver on this stream after RegisterStream succeeded");
-                    }
+                    StartInactiveCursors(streamData, startToken);
 
                 }
                 else
@@ -545,11 +534,22 @@ namespace Orleans.Streams
         {
             foreach (StreamConsumerData consumerData in streamData.AllConsumers())
             {
-                consumerData.Cursor?.Refresh(startToken);
-                if (consumerData.State == StreamConsumerDataState.Inactive)
+                // Some consumer might not be fully registered yet
+                if (consumerData.IsRegistered)
                 {
-                    // wake up inactive consumers
-                    RunConsumerCursor(consumerData).Ignore();
+                    consumerData.Cursor?.Refresh(startToken);
+                    if (consumerData.State == StreamConsumerDataState.Inactive)
+                    {
+                        // wake up inactive consumers
+                        RunConsumerCursor(consumerData).Ignore();
+                    }
+                }
+                else
+                {
+                    if (this.logger.IsEnabled(LogLevel.Debug))
+                        this.logger.LogDebug(
+                            $"Pulled new messages in stream {consumerData.StreamId} from the queue, but the subscriber isn't " +
+                            $"fully registered yet. The pulling agent will start deliver on this stream after registration is complete.");
                 }
             }
         }
@@ -756,31 +756,28 @@ namespace Orleans.Streams
             }
 
             // notify consumer about the error or that the data is not available.
-            await OrleansTaskExtentions.ExecuteAndIgnoreException(
-                () => DeliverErrorToConsumer(
-                    consumerData, exceptionOccured, batch));
+            await DeliverErrorToConsumer(consumerData, exceptionOccured, batch).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
             // record that there was a delivery failure
             if (isDeliveryError)
             {
-                await OrleansTaskExtentions.ExecuteAndIgnoreException(
-                    () => streamFailureHandler.OnDeliveryFailure(
-                        consumerData.SubscriptionId, streamProviderName, consumerData.StreamId, token));
+                await streamFailureHandler.OnDeliveryFailure(
+                        consumerData.SubscriptionId, streamProviderName, consumerData.StreamId, token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
             }
             else
             {
-                await OrleansTaskExtentions.ExecuteAndIgnoreException(
-                       () => streamFailureHandler.OnSubscriptionFailure(
-                           consumerData.SubscriptionId, streamProviderName, consumerData.StreamId, token));
+                await streamFailureHandler.OnSubscriptionFailure(
+                    consumerData.SubscriptionId, streamProviderName, consumerData.StreamId, token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
             }
+
             // if configured to fault on delivery failure and this is not an implicit subscription, fault and remove the subscription
             if (streamFailureHandler.ShouldFaultSubsriptionOnError && !SubscriptionMarker.IsImplicitSubscription(consumerData.SubscriptionId.Guid))
             {
                 try
                 {
                     // notify consumer of faulted subscription, if we can.
-                    await OrleansTaskExtentions.ExecuteAndIgnoreException(
-                        () => DeliverErrorToConsumer(
-                            consumerData, new FaultedSubscriptionException(consumerData.SubscriptionId, consumerData.StreamId), batch));
+                    await DeliverErrorToConsumer(
+                        consumerData, new FaultedSubscriptionException(consumerData.SubscriptionId, consumerData.StreamId), batch).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+
                     // mark subscription as faulted.
                     await pubSub.FaultSubscription(consumerData.StreamId, consumerData.SubscriptionId);
                 }
