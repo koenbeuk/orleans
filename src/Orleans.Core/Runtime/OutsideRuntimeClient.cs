@@ -88,6 +88,7 @@ namespace Orleans
             this.sharedCallbackData = new SharedCallbackData(
                 msg => this.UnregisterCallback(msg.Id),
                 this.loggerFactory.CreateLogger<CallbackData>(),
+                null,
                 this.clientMessagingOptions.ResponseTimeout);
         }
 
@@ -108,6 +109,7 @@ namespace Orleans
                 }
 
                 this.InternalGrainFactory = this.ServiceProvider.GetRequiredService<IInternalGrainFactory>();
+                this.sharedCallbackData.GrainFactory = this.InternalGrainFactory;
                 this.messageFactory = this.ServiceProvider.GetService<MessageFactory>();
                 this.localObjects = new InvokableObjectManager(
                     ServiceProvider.GetRequiredService<ClientGrainContext>(),
@@ -279,6 +281,7 @@ namespace Orleans
             {
                 var callbackData = new CallbackData(this.sharedCallbackData, context, message);
                 callbacks.TryAdd(message.Id, callbackData);
+                callbackData.SubscribeForCancellation(request);
             }
             else
             {
