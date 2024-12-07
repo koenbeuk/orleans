@@ -196,7 +196,7 @@ namespace Orleans.Hosting
 
             services.TryAddSingleton<MessageFactory>();
 
-            services.TryAddSingleton(FactoryUtility.Create<GrainDirectoryPartition>);
+            services.TryAddSingleton(FactoryUtility.Create<LocalGrainDirectoryPartition>);
 
             // Placement
             services.AddSingleton<IConfigurationValidator, ActivationCountBasedPlacementOptionsValidator>();
@@ -414,6 +414,7 @@ namespace Orleans.Hosting
             services.AddSingleton<ActivationMigrationManager>();
             services.AddFromExisting<IActivationMigrationManager, ActivationMigrationManager>();
             services.AddFromExisting<ILifecycleParticipant<ISiloLifecycle>, ActivationMigrationManager>();
+            services.AddSingleton<GrainMigratabilityChecker>();
 
             ApplyConfiguration(builder);
         }

@@ -58,6 +58,7 @@ namespace Orleans.Runtime.Messaging
             this.LocalEndPoint = NormalizeEndpoint(this.Context.LocalEndPoint);
         }
 
+        public ConnectionCommon Shared => shared;
         public string ConnectionId => this.Context?.ConnectionId;
         public virtual EndPoint RemoteEndPoint { get; }
         public virtual EndPoint LocalEndPoint { get; }
@@ -485,7 +486,7 @@ namespace Orleans.Runtime.Messaging
                     // If the message was a response, propagate the exception to the intended recipient.
                     message.Result = Message.ResponseTypes.Error;
                     message.BodyObject = Response.FromException(exception);
-                    this.MessageCenter.DispatchLocalMessage(message);
+                    this.OnReceivedMessage(message);
                 }
             }
 

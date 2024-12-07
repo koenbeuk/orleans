@@ -509,7 +509,7 @@ namespace Orleans.Runtime
             return Task.CompletedTask;
         }
 
-        public void BreakOutstandingMessagesToDeadSilo(SiloAddress deadSilo)
+        public void BreakOutstandingMessagesToSilo(SiloAddress deadSilo)
         {
             foreach (var callback in callbacks)
             {
